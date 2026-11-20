@@ -44,6 +44,7 @@
         <form method="post" action="{{ url_for('main.run_demo', action='break') }}"><button>换掉 2025-03（制造断链）</button></form>
         <form method="post" action="{{ url_for('main.run_demo', action='repair') }}"><button>恢复 2025-03 原报价</button></form>
         <form method="post" action="{{ url_for('main.run_demo', action='correct') }}"><button>更正 2025-02 的 A-01 报价 +20%</button></form>
+        <form method="post" action="{{ url_for('main.run_demo', action='stale') }}"><button>篡改 2025-02 报价（制造缓存过期）</button></form>
         <form method="post" action="{{ url_for('main.run_demo', action='reset') }}"
               onsubmit="return confirm('将删除全部报价与指数（包括手工上传的数据），确定？')">
           <button class="danger">清空全部数据</button>
@@ -56,7 +57,10 @@
     <section class="card">
       <div class="card-head">
         <h2>价格指数</h2>
-        {% if rows %}<a class="link" href="{{ url_for('main.download_index') }}">下载 CSV</a>{% endif %}
+        <div class="head-links">
+          {% if rows %}<a class="link" href="{{ url_for('main.contribution') }}">月度贡献明细</a>{% endif %}
+          {% if rows %}<a class="link" href="{{ url_for('main.download_index') }}">下载 CSV</a>{% endif %}
+        </div>
       </div>
       {% if not rows %}
         <p class="empty">还没有可用的指数，请先上传基月报价。</p>
@@ -73,7 +77,7 @@
           <tbody>
             {% for r in rows %}
             <tr class="row-{{ r.status }}">
-              <td>{{ r.month }}</td>
+              <td><a class="link month-link" href="{{ url_for('main.contribution', month=r.month) }}">{{ r.month }}</a></td>
               <td class="num">{% if r.is_base_month %}—{% elif r.pair_count is none %}—{% else %}{{ r.pair_count }}{% endif %}</td>
               <td class="num">{% if r.is_base_month %}—{% else %}{{ r.display_factor or '—' }}{% endif %}</td>
               <td class="num strong">{{ r.display_index or '—' }}</td>

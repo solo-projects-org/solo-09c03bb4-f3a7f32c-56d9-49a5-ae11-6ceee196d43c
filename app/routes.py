@@ -18,7 +18,7 @@ from flask import (
     url_for,
 )
 
-from . import calc, db, demo, services
+from . import calc, contrib, db, demo, services
 
 log = logging.getLogger(__name__)
 
@@ -65,6 +65,38 @@ def too_large(_err):
 def healthz():
     _conn().execute("SELECT 1")
     return {"status": "ok"}
+
+
+@bp.get("/contrib")
+def contribution():
+    """月度环比贡献明细页。"""
+    month = (request.args.get("month") or "").strip()
+    detail = contrib.contribution_detail(_conn(), month) if month else None
+    if detail is None:
+        # 未选择月份：只给选择器，不做任何分解
+        conn = _conn()
+        selectable = [
+            r["month"]
+            for r in conn.execute(
+                "SELECT month FROM index_months ORDER BY month"
+            ).fetchall()
+        ]
+        detail = {
+            "month": "",
+            "prev_month": None,
+            "selectable_months": selectable,
+            "selected": None,
+            "decomposable": False,
+            "status": "idle",
+            "reason": "",
+            "rows": [],
+            "pair_count": None,
+            "avg_factor": None,
+            "stale_info": [],
+            "current": None,
+            "previous": None,
+        }
+    return render_template("contrib.html", d=detail)
 
 
 @bp.post("/upload")

@@ -148,4 +148,27 @@ def run(action: str, conn) -> str:
             "2 月及之后各月指数随之更新。"
         )
 
+    if action == "stale":
+        # 只改生效报价、不触发重算：指数缓存保留旧批次算出的结果，
+        # 贡献明细页据此识别为「缓存过期」并拒绝展示混合结果。
+        with db.transaction(conn):
+            cur = conn.execute(
+                """
+                UPDATE prices SET price = price * 1.30
+                WHERE month = '2025-02'
+                  AND rowid = (
+                      SELECT rowid FROM prices
+                      WHERE month = '2025-02'
+                      ORDER BY stall, item LIMIT 1
+                  )
+                """
+            )
+            if cur.rowcount == 0:
+                raise DemoError("2025-02 没有可篡改的报价，请重新载入示例数据")
+        return (
+            "已直接篡改 2025-02 的一条生效报价但未重算指数："
+            "指数缓存与报价不一致，贡献明细页将标为「过期」且不展示混合结果；"
+            "重新上传 2025-02（如点「更正」演示）触发重算后恢复。"
+        )
+
     raise DemoError("未知的演示操作")

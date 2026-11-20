@@ -110,3 +110,29 @@ tbody tr:last-child td { border-bottom: none; }
 .tag.broken { background: var(--bad-soft); color: var(--bad); }
 
 table.compact th, table.compact td { padding: 6px 10px; font-size: 13px; }
+
+.head-links { display: flex; gap: 14px; align-items: baseline; }
+.month-link { font-weight: 600; }
+tfoot td { border-top: 2px solid var(--line); border-bottom: none; font-size: 13px; color: var(--muted); }
+
+select {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fafbfa;
+  font-size: 14px;
+  min-width: 160px;
+}
+
+.banner {
+  border: 1px solid var(--line);
+  border-left: 4px solid;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+.banner-bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
+.banner-warn { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.banner-list { margin: 8px 0 4px; padding-left: 20px; }
+.banner-note { margin: 6px 0 0; }
+

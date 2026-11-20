@@ -148,6 +148,30 @@ def month_prices(conn: sqlite3.Connection, month: str) -> dict[tuple[str, str], 
     return {(r["stall"], r["item"]): r["price"] for r in rows}
 
 
+def month_prices_for_upload(
+    conn: sqlite3.Connection, month: str, upload_id: int
+) -> dict[tuple[str, str], float]:
+    """只取指定上传批次的报价，确保明细与指数缓存引用的批次严格一致。"""
+    rows = conn.execute(
+        "SELECT stall, item, price FROM prices WHERE month = ? AND upload_id = ?",
+        (month, upload_id),
+    ).fetchall()
+    return {(r["stall"], r["item"]): r["price"] for r in rows}
+
+
+def index_row(conn: sqlite3.Connection, month: str) -> sqlite3.Row | None:
+    return conn.execute(
+        "SELECT * FROM index_months WHERE month = ?", (month,)
+    ).fetchone()
+
+
+def distinct_price_upload_ids(conn: sqlite3.Connection, month: str) -> set[int]:
+    rows = conn.execute(
+        "SELECT DISTINCT upload_id FROM prices WHERE month = ?", (month,)
+    ).fetchall()
+    return {r["upload_id"] for r in rows}
+
+
 def upsert_index_rows(
     conn: sqlite3.Connection, rows: Sequence[dict]
 ) -> None:

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>月度贡献明细 · 鲜菜价格指数</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>月度环比贡献明细</h1>
+    <p class="sub">按同摊同品种列出上月价、本月价、比值及其对环比系数的贡献</p>
+  </header>
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <section class="flashes">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+
+    <section class="card">
+      <div class="card-head">
+        <h2>选择月份</h2>
+        <a class="link" href="{{ url_for('main.home') }}">← 返回指数总览</a>
+      </div>
+      <form method="get" action="{{ url_for('main.contribution') }}">
+        <select name="month" required>
+          <option value="" disabled {% if not d.selected %}selected{% endif %}>请选择月份…</option>
+          {% for m in d.selectable_months %}
+          <option value="{{ m }}" {% if m == d.selected %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit">查看贡献明细</button>
+      </form>
+      <p class="hint">
+        贡献 = 该报价对的比值（本月价 ÷ 上月价）÷ 可比报价对数；各对贡献之和等于该月环比系数。
+        明细仅使用指数缓存引用的同一上传批次报价；缓存与报价不一致时整页标为过期，拒绝展示混合结果。
+      </p>
+    </section>
+
+    {% if d.selected or d.month %}
+    <section class="card">
+      <h2>{{ d.selected or d.month }} 环比贡献明细</h2>
+
+      {% if d.status == 'ok' %}
+      <p class="meta">
+        对比上月 <strong>{{ d.prev_month }}</strong>
+        · 可比报价对数 <strong>{{ d.pair_count }}</strong>
+        · 平均环比系数（缓存值）<strong>{{ d.display_avg_factor }}</strong>
+      </p>
+      <p class="meta">
+        本月引用批次 <strong>#{{ d.current.source_upload_id }}</strong>
+        （计算于 {{ d.current.computed_at }}）
+        · 上月引用批次 <strong>#{{ d.previous.source_upload_id }}</strong>
+        （计算于 {{ d.previous.computed_at }}）
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>摊位</th><th>品种</th>
+            <th class="num">上月价（{{ d.prev_month }}）</th>
+            <th class="num">本月价（{{ d.month }}）</th>
+            <th class="num">比值（本月/上月）</th>
+            <th class="num">对环比系数的贡献</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in d.rows %}
+          <tr>
+            <td>{{ r.stall }}</td>
+            <td>{{ r.item }}</td>
+            <td class="num">{{ r.display_prev_price }}</td>
+            <td class="num">{{ r.display_cur_price }}</td>
+            <td class="num">{{ r.display_ratio }}</td>
+            <td class="num strong">{{ r.display_contribution }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4">汇总（{{ d.pair_count }} 对可比报价，等权平均）</td>
+            <td class="num">平均系数</td>
+            <td class="num strong">{{ d.display_avg_factor }}</td>
+          </tr>
+        </tfoot>
+      </table>
+      <p class="hint">
+        排序：贡献绝对值降序；绝对值相同按摊位、品种升序。
+        各对贡献之和应等于平均环比系数（显示精度外的舍入误差除外）。
+      </p>
+
+      {% elif d.status == 'stale' %}
+      <div class="banner banner-bad">
+        <strong>缓存已过期：{{ d.month }} 的指数缓存与当前报价不一致，本页不展示混合结果。</strong>
+        <ul class="banner-list">
+          {% for line in d.stale_info %}<li>{{ line }}</li>{% endfor %}
+        </ul>
+        <p class="banner-note">{{ d.reason }}</p>
+        {% if d.current %}
+        <p class="banner-note">
+          缓存引用的本月批次：#{{ d.current.source_upload_id }}
+          （计算于 {{ d.current.computed_at }}）
+        </p>
+        {% endif %}
+      </div>
+
+      {% else %}
+      <div class="banner banner-warn">
+        <strong>该月环比不可分解</strong>
+        <p class="banner-note">{{ d.reason }}</p>
+        {% if d.status == 'missing' or d.status == 'broken' or d.status == 'no_pairs' %}
+        <p class="banner-note">
+          补报缺失月份或恢复同摊同品种报价后，指数重算即可在此查看贡献明细。
+        </p>
+        {% endif %}
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+  </main>
+</body>
+</html>
