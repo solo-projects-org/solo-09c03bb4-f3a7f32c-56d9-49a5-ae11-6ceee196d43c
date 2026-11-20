@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>鲜菜价格指数</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <h1>鲜菜价格指数</h1>
+    <p class="sub">按月份查看可比报价对数、环比系数与定基指数</p>
+  </header>
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <section class="flashes">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+
+    <section class="card">
+      <h2>上传单月报价</h2>
+      <form method="post" action="{{ url_for('main.upload') }}" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".csv,text/csv" required>
+        <button type="submit">上传</button>
+      </form>
+      <p class="hint">
+        CSV 表头：<code>月份,摊位,品种,每公斤报价</code>。一次只传一个月；
+        重复上传同一月份会整体替换该月报价。基月由第一次上传确定，早于基月的报价会被拒收。
+      </p>
+    </section>
+
+    {% if demo_enabled %}
+    <section class="card">
+      <h2>演示：换报断链与补报接续</h2>
+      <div class="buttons">
+        <form method="post" action="{{ url_for('main.run_demo', action='load') }}"><button>载入示例数据（缺 4 月）</button></form>
+        <form method="post" action="{{ url_for('main.run_demo', action='backfill') }}"><button>补报 2025-04</button></form>
+        <form method="post" action="{{ url_for('main.run_demo', action='break') }}"><button>换掉 2025-03（制造断链）</button></form>
+        <form method="post" action="{{ url_for('main.run_demo', action='repair') }}"><button>恢复 2025-03 原报价</button></form>
+        <form method="post" action="{{ url_for('main.run_demo', action='correct') }}"><button>更正 2025-02 的 A-01 报价 +20%</button></form>
+        <form method="post" action="{{ url_for('main.run_demo', action='reset') }}"
+              onsubmit="return confirm('将删除全部报价与指数（包括手工上传的数据），确定？')">
+          <button class="danger">清空全部数据</button>
+        </form>
+      </div>
+      <p class="hint">「清空全部数据」会删除数据库里的所有报价与指数，谨慎操作。</p>
+    </section>
+    {% endif %}
+
+    <section class="card">
+      <div class="card-head">
+        <h2>价格指数</h2>
+        {% if rows %}<a class="link" href="{{ url_for('main.download_index') }}">下载 CSV</a>{% endif %}
+      </div>
+      {% if not rows %}
+        <p class="empty">还没有可用的指数，请先上传基月报价。</p>
+      {% else %}
+        <p class="meta">
+          基月 <strong>{{ base_month }}</strong>
+          · 最新报价月 <strong>{{ latest_month }}</strong>
+          · 共 {{ rows|length }} 个月
+        </p>
+        <table>
+          <thead>
+            <tr><th>月份</th><th>可比报价对数</th><th>环比系数</th><th>价格指数</th><th>状态</th></tr>
+          </thead>
+          <tbody>
+            {% for r in rows %}
+            <tr class="row-{{ r.status }}">
+              <td>{{ r.month }}</td>
+              <td class="num">{% if r.is_base_month %}—{% elif r.pair_count is none %}—{% else %}{{ r.pair_count }}{% endif %}</td>
+              <td class="num">{% if r.is_base_month %}—{% else %}{{ r.display_factor or '—' }}{% endif %}</td>
+              <td class="num strong">{{ r.display_index or '—' }}</td>
+              <td>
+                {% if r.status == 'base' %}<span class="tag base">基月</span>
+                {% elif r.status == 'ok' %}<span class="tag ok">正常</span>
+                {% elif r.status == 'missing' %}<span class="tag missing">缺月</span>
+                {% elif r.status == 'no_pairs' %}<span class="tag broken">无可比报价对</span>
+                {% else %}<span class="tag broken">断链</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% endif %}
+    </section>
+
+    {% if uploads %}
+    <section class="card">
+      <h2>最近上传</h2>
+      <table class="compact">
+        <thead><tr><th>#</th><th>月份</th><th>条数</th><th>文件</th><th>时间（UTC）</th></tr></thead>
+        <tbody>
+          {% for u in uploads %}
+          <tr>
+            <td>{{ u['id'] }}</td>
+            <td>{{ u['month'] }}</td>
+            <td class="num">{{ u['row_count'] }}</td>
+            <td class="filename">{{ u['filename'] }}</td>
+            <td class="num">{{ u['uploaded_at'] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    {% endif %}
+  </main>
+</body>
+</html>
